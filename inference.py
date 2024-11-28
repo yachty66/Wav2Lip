@@ -258,7 +258,7 @@ def main():
 
 		# Create lists to store frames and their processing status
 		processed_frames = []
-		silent_mel = np.zeros_like(mel_batch[0])  # Create silent mel spectrogram
+		silent_mel = np.full_like(mel_batch[0], -20.0)  # Experiment with this value
 		
 		for j, mel_frame in enumerate(mel_batch):
 			if not audio.is_dialog(mel_frame):
