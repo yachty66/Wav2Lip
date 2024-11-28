@@ -234,7 +234,9 @@ def main():
 	while 1:
 		start_idx = int(i * mel_idx_multiplier)
 		if start_idx + mel_step_size > len(mel[0]):
-			mel_chunks.append(mel[:, len(mel[0]) - mel_step_size:])
+			chunk = mel[:, len(mel[0]) - mel_step_size:]
+			mel_chunks.append(chunk)
+			# audio.is_dialog(chunk)  # Just print the energy value
 			break
 		mel_chunks.append(mel[:, start_idx : start_idx + mel_step_size])
 		i += 1
@@ -255,6 +257,9 @@ def main():
 			frame_h, frame_w = full_frames[0].shape[:-1]
 			out = cv2.VideoWriter('temp/result.avi', 
 									cv2.VideoWriter_fourcc(*'DIVX'), fps, (frame_w, frame_h))
+
+		for j, mel_frame in enumerate(mel_batch):
+			audio.is_dialog(mel_frame)
 
 		img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(device)
 		mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(device)

@@ -42,12 +42,60 @@ def linearspectrogram(wav):
         return _normalize(S)
     return S
 
+# def is_dialog(mel_chunk, threshold_db=-40):
+#     """
+#     Detects if there is speech/dialog in a mel spectrogram chunk
+#     Args:
+#         mel_chunk: A segment of the mel spectrogram
+#         threshold_db: Energy threshold in dB above which we consider speech present
+#     Returns:
+#         bool: True if speech detected, False if silence
+#     """
+#     # If normalized, denormalize to get back to dB scale
+#     if hp.signal_normalization:
+#         mel_chunk = _denormalize(mel_chunk)
+    
+#     # Calculate mean energy across frequencies
+#     mean_energy = np.mean(mel_chunk)
+    
+#     # Print for debugging
+#     print(f"Frame energy: {mean_energy:.2f} dB")
+    
+#     return mean_energy > threshold_db
+
+def is_dialog(mel_chunk, threshold_db=-85):
+    """
+    Detects if there is speech/dialog in a mel spectrogram chunk
+    Args:
+        mel_chunk: A segment of the mel spectrogram
+        threshold_db: Energy threshold in dB above which we consider speech present
+    Returns:
+        bool: True if speech detected, False if silence
+    """
+    # If normalized, denormalize to get back to dB scale
+    if hp.signal_normalization:
+        mel_chunk = _denormalize(mel_chunk)
+    
+    # Calculate mean energy across frequencies
+    mean_energy = np.mean(mel_chunk)
+    
+    # Check if it's silence and print if it is
+    is_speech = mean_energy > threshold_db
+    if not is_speech:
+        print(f"No dialog detected! Frame energy: {mean_energy:.2f} dB")
+    
+    return is_speech
+
+#this function returns the values which are then processed by the model
 def melspectrogram(wav):
     D = _stft(preemphasis(wav, hp.preemphasis, hp.preemphasize))
     S = _amp_to_db(_linear_to_mel(np.abs(D))) - hp.ref_level_db
     
     if hp.signal_normalization:
-        return _normalize(S)
+        normalised = _normalize(S)
+        print("Normalised:")
+        print(normalised)
+        return normalised
     return S
 
 def _lws_processor():
