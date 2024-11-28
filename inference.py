@@ -258,46 +258,32 @@ def main():
 
 		# Create lists to store frames and their processing status
 		processed_frames = []
+		silent_mel = np.zeros_like(mel_batch[0])  # Create silent mel spectrogram
 		
 		for j, mel_frame in enumerate(mel_batch):
 			if not audio.is_dialog(mel_frame):
-				# Store original frame
-				processed_frames.append((frames[j], None, coords[j]))
+				# For silent frames, use zero mel spectrogram to generate closed lips
+				processed_frames.append((frames[j], j, coords[j]))
+				mel_batch[j] = silent_mel  # Replace with silent mel
 			else:
-				# Mark frame for processing
+				# Mark frame for processing with actual audio
 				processed_frames.append((frames[j], j, coords[j]))
 
-		# Only process frames with dialog
-		valid_indices = [idx for _, idx, _ in processed_frames if idx is not None]
+		# Process all frames through the model
+		img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(device)
+		mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(device)
+
+		with torch.no_grad():
+			pred = model(mel_batch, img_batch)
+
+		pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.
 		
-		if valid_indices:  # If we have frames to process
-			valid_img_batch = img_batch[valid_indices]
-			valid_mel_batch = mel_batch[valid_indices]
-
-			img_batch = torch.FloatTensor(np.transpose(valid_img_batch, (0, 3, 1, 2))).to(device)
-			mel_batch = torch.FloatTensor(np.transpose(valid_mel_batch, (0, 3, 1, 2))).to(device)
-
-			with torch.no_grad():
-				pred = model(mel_batch, img_batch)
-
-			pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.
-			
-			# Insert processed frames back into their positions
-			pred_idx = 0
-			for k, (frame, idx, coords) in enumerate(processed_frames):
-				if idx is not None:
-					# This is a processed frame
-					y1, y2, x1, x2 = coords
-					p = cv2.resize(pred[pred_idx].astype(np.uint8), (x2 - x1, y2 - y1))
-					frame[y1:y2, x1:x2] = p
-					pred_idx += 1
-				
-				# Write frame to output
-				out.write(frame)
-		else:
-			# If no frames needed processing, write all original frames
-			for frame, _, _ in processed_frames:
-				out.write(frame)
+		# Write all frames
+		for k, (frame, idx, coords) in enumerate(processed_frames):
+			y1, y2, x1, x2 = coords
+			p = cv2.resize(pred[k].astype(np.uint8), (x2 - x1, y2 - y1))
+			frame[y1:y2, x1:x2] = p
+			out.write(frame)
 
 	out.release()
 
