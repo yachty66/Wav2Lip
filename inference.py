@@ -258,32 +258,66 @@ def main():
 
 		# Create lists to store frames and their processing status
 		processed_frames = []
-		silent_mel = np.full_like(mel_batch[0], -20.0)  # Experiment with this value
+		silent_mel = np.zeros_like(mel_batch[0])
 		
+		# Keep track of silent period
+		in_silent_period = False
+		first_silent_idx = None
+		
+		# First pass: mark frames for processing
 		for j, mel_frame in enumerate(mel_batch):
 			if not audio.is_dialog(mel_frame):
-				# For silent frames, use zero mel spectrogram to generate closed lips
-				processed_frames.append((frames[j], j, coords[j]))
-				mel_batch[j] = silent_mel  # Replace with silent mel
+				if not in_silent_period:
+					# Start of silent period - mark first frame for processing with silent mel
+					processed_frames.append((frames[j], j, coords[j], True))  # True indicates silent frame
+					mel_batch[j] = silent_mel
+					first_silent_idx = j
+					in_silent_period = True
+				else:
+					# During silent period - will be replaced with first silent frame's prediction
+					processed_frames.append((frames[j], None, coords[j], True))
 			else:
-				# Mark frame for processing with actual audio
-				processed_frames.append((frames[j], j, coords[j]))
+				# Speech frame - process normally
+				processed_frames.append((frames[j], j, coords[j], False))
+				in_silent_period = False
+				first_silent_idx = None
 
-		# Process all frames through the model
-		img_batch = torch.FloatTensor(np.transpose(img_batch, (0, 3, 1, 2))).to(device)
-		mel_batch = torch.FloatTensor(np.transpose(mel_batch, (0, 3, 1, 2))).to(device)
-
-		with torch.no_grad():
-			pred = model(mel_batch, img_batch)
-
-		pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.
+		# Process frames through the model
+		valid_indices = [idx for _, idx, _, _ in processed_frames if idx is not None]
 		
-		# Write all frames
-		for k, (frame, idx, coords) in enumerate(processed_frames):
-			y1, y2, x1, x2 = coords
-			p = cv2.resize(pred[k].astype(np.uint8), (x2 - x1, y2 - y1))
-			frame[y1:y2, x1:x2] = p
-			out.write(frame)
+		if valid_indices:  # If we have frames to process
+			valid_img_batch = img_batch[valid_indices]
+			valid_mel_batch = mel_batch[valid_indices]
+
+			img_batch = torch.FloatTensor(np.transpose(valid_img_batch, (0, 3, 1, 2))).to(device)
+			mel_batch = torch.FloatTensor(np.transpose(valid_mel_batch, (0, 3, 1, 2))).to(device)
+
+			with torch.no_grad():
+				pred = model(mel_batch, img_batch)
+
+			pred = pred.cpu().numpy().transpose(0, 2, 3, 1) * 255.
+			
+			# Write all frames
+			pred_idx = 0
+			silent_frame = None
+			
+			for k, (frame, idx, coords, is_silent) in enumerate(processed_frames):
+				y1, y2, x1, x2 = coords
+				
+				if idx is not None:
+					# This is a processed frame
+					p = cv2.resize(pred[pred_idx].astype(np.uint8), (x2 - x1, y2 - y1))
+					if is_silent:
+						# Store the first silent frame prediction
+						silent_frame = p.copy()
+					frame[y1:y2, x1:x2] = p
+					pred_idx += 1
+				else:
+					# Use the stored silent frame
+					resized_silent = cv2.resize(silent_frame, (x2 - x1, y2 - y1))
+					frame[y1:y2, x1:x2] = resized_silent
+				
+				out.write(frame)
 
 	out.release()
 
