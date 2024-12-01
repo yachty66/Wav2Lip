@@ -86,15 +86,29 @@ def face_detect(images):
 
 	results = []
 	pady1, pady2, padx1, padx2 = args.pads
-	for rect, image in zip(predictions, images):
+	for i, (rect, image) in enumerate(zip(predictions, images)):
 		if rect is None:
-			cv2.imwrite('temp/faulty_frame.jpg', image) # check this frame where the face was not detected.
+			cv2.imwrite('temp/faulty_frame.jpg', image)
 			raise ValueError('Face not detected! Ensure the video contains a face in all the frames.')
 
 		y1 = max(0, rect[1] - pady1)
 		y2 = min(image.shape[0], rect[3] + pady2)
 		x1 = max(0, rect[0] - padx1)
 		x2 = min(image.shape[1], rect[2] + padx2)
+		
+		# Save visualization of the detected area
+		debug_image = image.copy()
+		# Draw rectangle around detected face area
+		cv2.rectangle(debug_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+		# Draw original detection rectangle
+		cv2.rectangle(debug_image, (int(rect[0]), int(rect[1])), (int(rect[2]), int(rect[3])), (0, 0, 255), 2)
+		
+		# Create temp directory if it doesn't exist
+		os.makedirs('temp/face_detections', exist_ok=True)
+		# Save the image with rectangles
+		cv2.imwrite(f'temp/face_detections/frame_{i}_detection.jpg', debug_image)
+		# Save the cropped face area
+		cv2.imwrite(f'temp/face_detections/frame_{i}_cropped.jpg', image[y1:y2, x1:x2])
 		
 		results.append([x1, y1, x2, y2])
 
