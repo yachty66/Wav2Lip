@@ -86,29 +86,15 @@ def face_detect(images):
 
 	results = []
 	pady1, pady2, padx1, padx2 = args.pads
-	for i, (rect, image) in enumerate(zip(predictions, images)):
+	for rect, image in zip(predictions, images):
 		if rect is None:
-			cv2.imwrite('temp/faulty_frame.jpg', image)
+			cv2.imwrite('temp/faulty_frame.jpg', image) # check this frame where the face was not detected.
 			raise ValueError('Face not detected! Ensure the video contains a face in all the frames.')
 
 		y1 = max(0, rect[1] - pady1)
 		y2 = min(image.shape[0], rect[3] + pady2)
 		x1 = max(0, rect[0] - padx1)
 		x2 = min(image.shape[1], rect[2] + padx2)
-		
-		# Save visualization of the detected area
-		debug_image = image.copy()
-		# Draw rectangle around detected face area
-		cv2.rectangle(debug_image, (x1, y1), (x2, y2), (0, 255, 0), 2)
-		# Draw original detection rectangle
-		cv2.rectangle(debug_image, (int(rect[0]), int(rect[1])), (int(rect[2]), int(rect[3])), (0, 0, 255), 2)
-		
-		# Create temp directory if it doesn't exist
-		os.makedirs('temp/face_detections', exist_ok=True)
-		# Save the image with rectangles
-		cv2.imwrite(f'temp/face_detections/frame_{i}_detection.jpg', debug_image)
-		# Save the cropped face area
-		cv2.imwrite(f'temp/face_detections/frame_{i}_cropped.jpg', image[y1:y2, x1:x2])
 		
 		results.append([x1, y1, x2, y2])
 
@@ -322,14 +308,35 @@ def main():
 					# This is a processed frame
 					p = cv2.resize(pred[pred_idx].astype(np.uint8), (x2 - x1, y2 - y1))
 					if is_silent:
-						# Store the first silent frame prediction
+						# Store the first silent frame prediction and lip coordinates
 						silent_frame = p.copy()
+						
+						# Calculate lip bounding box
+						face_height = y2 - y1
+						lip_y1 = y1 + int(face_height * 0.6)
+						lip_y2 = y1 + int(face_height * 0.8)
+						lip_x1 = x1 + int((x2 - x1) * 0.3)
+						lip_x2 = x1 + int((x2 - x1) * 0.7)
+						
+						# Store these coordinates for later use
+						silent_lip_coords = (lip_y1, lip_y2, lip_x1, lip_x2)
+						
+						# Calculate relative coordinates in the predicted face
+						relative_lip_y1 = int((lip_y1 - y1) * (p.shape[0] / (y2 - y1)))
+						relative_lip_y2 = int((lip_y2 - y1) * (p.shape[0] / (y2 - y1)))
+						relative_lip_x1 = int((lip_x1 - x1) * (p.shape[1] / (x2 - x1)))
+						relative_lip_x2 = int((lip_x2 - x1) * (p.shape[1] / (x2 - x1)))
+						
+						# Store the predicted lip region
+						silent_lip_region = p[relative_lip_y1:relative_lip_y2, relative_lip_x1:relative_lip_x2]
+						
 					frame[y1:y2, x1:x2] = p
 					pred_idx += 1
 				else:
-					# Use the stored silent frame
-					resized_silent = cv2.resize(silent_frame, (x2 - x1, y2 - y1))
-					frame[y1:y2, x1:x2] = resized_silent
+					# During silent period, only replace the lip region
+					lip_y1, lip_y2, lip_x1, lip_x2 = silent_lip_coords
+					frame[lip_y1:lip_y2, lip_x1:lip_x2] = cv2.resize(silent_lip_region, 
+																	(lip_x2 - lip_x1, lip_y2 - lip_y1))
 				
 				out.write(frame)
 
