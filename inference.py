@@ -308,35 +308,49 @@ def main():
 					# This is a processed frame
 					p = cv2.resize(pred[pred_idx].astype(np.uint8), (x2 - x1, y2 - y1))
 					if is_silent:
-						# Store the first silent frame prediction and lip coordinates
+						# Store the first silent frame prediction
 						silent_frame = p.copy()
-						
-						# Calculate lip bounding box
-						face_height = y2 - y1
-						lip_y1 = y1 + int(face_height * 0.6)
-						lip_y2 = y1 + int(face_height * 0.8)
-						lip_x1 = x1 + int((x2 - x1) * 0.3)
-						lip_x2 = x1 + int((x2 - x1) * 0.7)
-						
-						# Store these coordinates for later use
-						silent_lip_coords = (lip_y1, lip_y2, lip_x1, lip_x2)
-						
-						# Calculate relative coordinates in the predicted face
-						relative_lip_y1 = int((lip_y1 - y1) * (p.shape[0] / (y2 - y1)))
-						relative_lip_y2 = int((lip_y2 - y1) * (p.shape[0] / (y2 - y1)))
-						relative_lip_x1 = int((lip_x1 - x1) * (p.shape[1] / (x2 - x1)))
-						relative_lip_x2 = int((lip_x2 - x1) * (p.shape[1] / (x2 - x1)))
-						
-						# Store the predicted lip region
-						silent_lip_region = p[relative_lip_y1:relative_lip_y2, relative_lip_x1:relative_lip_x2]
-						
-					frame[y1:y2, x1:x2] = p
+					
+					# Calculate dimensions for cropped region
+					face_height = y2 - y1
+					face_width = x2 - x1
+					
+					# Calculate 30% from bottom
+					start_y = y2 - int(face_height * 0.3)
+					
+					# Calculate 60% of width, centered
+					width_reduction = int(face_width * 0.2)
+					new_x1 = x1 + width_reduction
+					new_x2 = x2 - width_reduction
+					
+					# Calculate exact heights
+					source_height = int(face_height * 0.3) #this was 3 before
+					source_start = face_height - source_height
+					
+					# Apply cropped prediction to frame
+					frame[start_y:y2, new_x1:new_x2] = p[source_start:, width_reduction:-width_reduction]
+					
 					pred_idx += 1
+
+					# Save every 10th frame for validation
+					if k % 10 == 0:
+						cv2.imwrite(f'temp/frame_{k}.jpg', frame)
 				else:
-					# During silent period, only replace the lip region
-					lip_y1, lip_y2, lip_x1, lip_x2 = silent_lip_coords
-					frame[lip_y1:lip_y2, lip_x1:lip_x2] = cv2.resize(silent_lip_region, 
-																	(lip_x2 - lip_x1, lip_y2 - lip_y1))
+					# Use the stored silent frame for silent periods
+					face_height = y2 - y1
+					face_width = x2 - x1
+					
+					start_y = y2 - int(face_height * 0.3)
+					width_reduction = int(face_width * 0.2)
+					new_x1 = x1 + width_reduction
+					new_x2 = x2 - width_reduction
+
+					source_height = int(face_height * 0.3)
+					source_start = face_height - source_height
+					
+					# Resize the silent frame first
+					resized_silent = cv2.resize(silent_frame, (x2 - x1, y2 - y1))
+					frame[start_y:y2, new_x1:new_x2] = resized_silent[source_start:, width_reduction:-width_reduction]
 				
 				out.write(frame)
 
@@ -346,4 +360,8 @@ def main():
 	subprocess.call(command, shell=platform.system() != 'Windows')
 
 if __name__ == '__main__':
+	#this should make a static result
 	main()
+
+
+
