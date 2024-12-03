@@ -315,8 +315,8 @@ def main():
 					face_height = y2 - y1
 					face_width = x2 - x1
 					
-					# Calculate 30% from bottom
-					start_y = y2 - int(face_height * 0.3)
+					# Calculate 20% from bottom (was 30% before)
+					start_y = y2 - int(face_height * 0.39)
 					
 					# Calculate 60% of width, centered
 					width_reduction = int(face_width * 0.2)
@@ -324,7 +324,7 @@ def main():
 					new_x2 = x2 - width_reduction
 					
 					# Calculate exact heights
-					source_height = int(face_height * 0.3) #this was 3 before
+					source_height = int(face_height * 0.39) # Adjusted to match start_y change
 					source_start = face_height - source_height
 					
 					# Apply cropped prediction to frame
@@ -340,12 +340,12 @@ def main():
 					face_height = y2 - y1
 					face_width = x2 - x1
 					
-					start_y = y2 - int(face_height * 0.3)
+					start_y = y2 - int(face_height * 0.39)
 					width_reduction = int(face_width * 0.2)
 					new_x1 = x1 + width_reduction
 					new_x2 = x2 - width_reduction
 
-					source_height = int(face_height * 0.3)
+					source_height = int(face_height * 0.39)
 					source_start = face_height - source_height
 					
 					# Resize the silent frame first
