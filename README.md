@@ -133,7 +133,7 @@ Parts of the code structure are inspired by this [TTS repository](https://github
  - [Awesome README](https://github.com/matiassingers/awesome-readme)
  - [How to write a Good readme](https://bulldogjob.com/news/449-how-to-write-a-good-readme-for-your-github-project)
 
+## todo
 
-either i change image input modality or i take the existing closed lips and overlay them on top of the generated lips.
-
-image overlay would be possible. lets bring back the approach i had. 
+- [ ] find out if the weirdness is caused really by a decibel sound
+    - if this is true how can i fix it if not what else could be causing it. 

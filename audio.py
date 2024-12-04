@@ -63,7 +63,7 @@ def linearspectrogram(wav):
     
 #     return mean_energy > threshold_db
 
-def is_dialog(mel_chunk, threshold_db=-85):
+def is_dialog(mel_chunk, frame_idx, fps, threshold_db=-85):
     """
     Detects if there is speech/dialog in a mel spectrogram chunk
     Args:
@@ -72,6 +72,7 @@ def is_dialog(mel_chunk, threshold_db=-85):
     Returns:
         bool: True if speech detected, False if silence
     """
+
     # If normalized, denormalize to get back to dB scale
     if hp.signal_normalization:
         mel_chunk = _denormalize(mel_chunk)
@@ -81,8 +82,9 @@ def is_dialog(mel_chunk, threshold_db=-85):
     
     # Check if it's silence and print if it is
     is_speech = mean_energy > threshold_db
-    if not is_speech:
-        print(f"No dialog detected! Frame energy: {mean_energy:.2f} dB")
+    # if not is_speech:
+    #     print(f"No dialog detected! Frame energy: {mean_energy:.2f} dB")
+    print(f"Frame {frame_idx} | Time: {frame_idx / fps:.2f} seconds | Energy: {mean_energy:.2f} dB | is_speech: {is_speech}")
     
     return is_speech
 

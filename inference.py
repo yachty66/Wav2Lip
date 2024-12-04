@@ -266,7 +266,9 @@ def main():
 		
 		# First pass: mark frames for processing
 		for j, mel_frame in enumerate(mel_batch):
-			if not audio.is_dialog(mel_frame):
+			# Calculate global frame index based on batch position
+			global_frame_idx = i * batch_size + j
+			if not audio.is_dialog(mel_frame, frame_idx=global_frame_idx, fps=fps):
 				if not in_silent_period:
 					# Start of silent period - mark first frame for processing with silent mel
 					processed_frames.append((frames[j], j, coords[j], True))  # True indicates silent frame
@@ -362,6 +364,3 @@ def main():
 if __name__ == '__main__':
 	#this should make a static result
 	main()
-
-
-
