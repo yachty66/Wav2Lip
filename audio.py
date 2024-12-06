@@ -82,9 +82,12 @@ def is_dialog(mel_chunk, frame_idx, fps, threshold_db=-85):
     
     # Check if it's silence and print if it is
     is_speech = mean_energy > threshold_db
-    # if not is_speech:
-    #     print(f"No dialog detected! Frame energy: {mean_energy:.2f} dB")
-    print(f"Frame {frame_idx} | Time: {frame_idx / fps:.2f} seconds | Energy: {mean_energy:.2f} dB | is_speech: {is_speech}")
+    
+    fps=31.8574514039
+
+    #what can i do now to succeed with that stuff 
+
+    print(f"Frame {frame_idx} | Time: {frame_idx / fps} seconds | Energy: {mean_energy:.2f} dB | is_speech: {is_speech}")
     
     return is_speech
 
