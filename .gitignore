@@ -1,6 +1,5 @@
 *.pkl
 *.jpg
-*.mp4
 *.pth
 *.pyc
 __pycache__
@@ -13,4 +12,3 @@ evaluation/test_filelists/lr*.txt
 *.mkv
 *.gif
 *.webm
-*.mp3
